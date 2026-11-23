@@ -1,5 +1,28 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import portraitOne from './assets/seyi-ariyo-ShX35xx2FhA-unsplash.jpg'
+import portraitTwo from './assets/seyi-ariyo-mRnpCiQfWPY-unsplash.jpg'
+import portraitThree from './assets/seyi-ariyo-ovo6J5KJbg0-unsplash.jpg'
+import fineLineImage from './assets/download (3).jpg'
+import blackworkImage from './assets/download (2).jpg'
+import botanicalImage from './assets/Floral Tattoo.jpg'
+import customWorkImage from './assets/seyi-ariyo-ovo6J5KJbg0-unsplash.jpg'
+import studioLogo from './assets/Midnight M Tattoo Studio Emblem.png'
+
+const heroSlides = [
+  {
+    src: portraitOne,
+    alt: 'Tattooed man photographed in profile',
+  },
+  {
+    src: portraitTwo,
+    alt: 'Tattooed man extending his arm',
+  },
+  {
+    src: portraitThree,
+    alt: 'Tattooed man in a three-quarter profile',
+  },
+]
 
 const navigation = [
   { label: 'Styles', href: '#work' },
@@ -8,10 +31,10 @@ const navigation = [
 ]
 
 const styles = [
-  { name: 'Fine line' },
-  { name: 'Blackwork' },
-  { name: 'Botanical' },
-  { name: 'Custom work' },
+  { name: 'Fine line', image: fineLineImage },
+  { name: 'Blackwork', image: blackworkImage },
+  { name: 'Botanical', image: botanicalImage },
+  { name: 'Custom work', image: customWorkImage },
 ]
 
 const processSteps = [
@@ -21,44 +44,72 @@ const processSteps = [
   { title: 'Aftercare' },
 ]
 
-function DaggerArtwork() {
+function HeroSlider() {
+  const [activeSlide, setActiveSlide] = useState(0)
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % heroSlides.length)
+    }, 5000)
+
+    return () => window.clearInterval(interval)
+  }, [])
+
+  function showPrevious() {
+    setActiveSlide((current) =>
+      current === 0 ? heroSlides.length - 1 : current - 1,
+    )
+  }
+
+  function showNext() {
+    setActiveSlide((current) => (current + 1) % heroSlides.length)
+  }
+
   return (
-    <svg
-      className="hero-art"
-      viewBox="0 0 400 520"
-      role="img"
-      aria-label="Fine-line illustration of a dagger, rose, and laurel"
-    >
-      <circle pathLength="1" className="draw-later" cx="200" cy="260" r="170" />
-      <circle
-        pathLength="1"
-        className="fine draw-last"
-        cx="200"
-        cy="260"
-        r="156"
-      />
-      <path pathLength="1" d="M200 40 214 120v210l-14 20-14-20V120Z" />
-      <path pathLength="1" className="fine draw-later" d="M200 52v283" />
-      <path pathLength="1" d="M150 350q50-20 100 0-50 12-100 0Z" />
-      <path pathLength="1" d="M200 362v78" />
-      <path pathLength="1" className="draw-last" d="M188 440h24l-4 22h-16Z" />
-      <path
-        pathLength="1"
-        className="draw-last"
-        d="M200 190c-30-20-40 15-15 25-15 10 0 30 15 17 15 13 30-7 15-17 25-10 15-45-15-25Z"
-      />
-      <path
-        pathLength="1"
-        className="fine draw-last"
-        d="M200 200c-10 5-8 18 2 18 8-2 6-12-2-12"
-      />
-      <path
-        pathLength="1"
-        className="fine draw-last"
-        d="M95 330q-35-70 0-140m10 110q-27-38-5-78m200 108q35-70 0-140m-10 110q27-38 5-78"
-      />
-      <path className="ornament-fill" d="m200 18 5 10-5 10-5-10Zm0 464 5 10-5 10-5-10Z" />
-    </svg>
+    <div className="hero-slider" aria-label="Featured tattoo artwork">
+      <div className="hero-slides">
+        {heroSlides.map((slide, index) => (
+          <figure
+            className={`hero-slide${index === activeSlide ? ' is-active' : ''}`}
+            key={slide.src}
+            aria-hidden={index !== activeSlide}
+          >
+            <img src={slide.src} alt={slide.alt} />
+          </figure>
+        ))}
+      </div>
+
+      <div className="slider-controls">
+        <button
+          className="slider-arrow"
+          type="button"
+          aria-label="Previous image"
+          onClick={showPrevious}
+        >
+          ←
+        </button>
+        <div className="slider-dots" role="group" aria-label="Choose slide">
+          {heroSlides.map((slide, index) => (
+            <button
+              className={index === activeSlide ? 'is-active' : ''}
+              type="button"
+              aria-label={`Show image ${index + 1}`}
+              aria-current={index === activeSlide ? 'true' : undefined}
+              key={slide.src}
+              onClick={() => setActiveSlide(index)}
+            />
+          ))}
+        </div>
+        <button
+          className="slider-arrow"
+          type="button"
+          aria-label="Next image"
+          onClick={showNext}
+        >
+          →
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -94,15 +145,12 @@ function App() {
       <div className="page-wrap" id="top">
         <header className="site-header">
           <a className="brand" href="#top" aria-label="Moise Tattoo home">
-            <svg
+            <img
               className="brand-mark"
-              viewBox="0 0 36 36"
+              src={studioLogo}
+              alt=""
               aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M18 2.5 33.5 18 18 33.5 2.5 18 18 2.5Z" />
-              <path d="M12 24V12l6 7 6-7v12" />
-            </svg>
+            />
             <span className="brand-type">
               <span className="brand-name">Moise</span>
               <span className="brand-subtitle">Tattoo studio</span>
@@ -188,7 +236,7 @@ function App() {
                 Start a conversation <span aria-hidden="true">↗</span>
               </a>
             </div>
-            <DaggerArtwork />
+            <HeroSlider />
           </section>
         </main>
       </div>
@@ -202,10 +250,8 @@ function App() {
           <div className="style-gallery">
             {styles.map((style) => (
               <article className="style-card" key={style.name}>
-                <div className="style-photo" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" focusable="false">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
+                <div className="style-photo">
+                  <img src={style.image} alt={`${style.name} tattoo style example`} />
                 </div>
                 <h3>{style.name}</h3>
               </article>
