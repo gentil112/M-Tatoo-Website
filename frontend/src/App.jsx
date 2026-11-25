@@ -120,6 +120,8 @@ function App() {
   )
   const [requestReady, setRequestReady] = useState(false)
   const [firstName, setFirstName] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -133,11 +135,36 @@ function App() {
     setMenuOpen(false)
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    setFirstName(formData.get('name').trim().split(/\s+/)[0])
-    setRequestReady(true)
+    setSubmitting(true)
+    setSubmitError('')
+
+    try {
+      const formData = new FormData(event.currentTarget)
+      const booking = Object.fromEntries(formData.entries())
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(booking),
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Unable to send your request.')
+      }
+
+      setFirstName(booking.name.trim().split(/\s+/)[0])
+      setRequestReady(true)
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to send your request. Please try again.',
+      )
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -298,8 +325,8 @@ function App() {
             <div className="form-success" role="status">
               <h3>Thank you, {firstName}.</h3>
               <p>
-                Your details are ready. This form is a design preview and
-                doesn’t send messages yet.
+                Your consultation request has been received. We’ll be in touch
+                using the email address you provided.
               </p>
               <button
                 className="text-button"
@@ -351,11 +378,19 @@ function App() {
                   required
                 />
               </label>
-              <button className="button-link form-submit" type="submit">
-                Request a consultation <span aria-hidden="true">↗</span>
+              <button
+                className="button-link form-submit"
+                type="submit"
+                disabled={submitting}
+              >
+                {submitting ? 'Sending request…' : 'Request a consultation'}
+                {!submitting && <span aria-hidden="true">↗</span>}
               </button>
+              {submitError && (
+                <p className="form-error" role="alert">{submitError}</p>
+              )}
               <p className="form-disclaimer">
-                This preview form does not send or store your details.
+                Your details are sent to the studio for follow-up.
               </p>
             </form>
           )}
@@ -366,6 +401,7 @@ function App() {
         <div className="wrap footer-inner">
           <a className="footer-brand" href="#top">Moise Tattoo</a>
           <span>Custom tattoos, made personal.</span>
+          <a className="admin-footer-link" href="/login">Admin</a>
           <a href="#top">Back to top ↑</a>
         </div>
       </footer>
