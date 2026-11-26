@@ -210,7 +210,7 @@ function App() {
             <a className="mobile-booking" href="#book" onClick={closeMenu}>
               Book a consultation <span aria-hidden="true">↗</span>
             </a>
-            <a className="mobile-admin" href="/admin/login" onClick={closeMenu}>
+            <a className="mobile-admin" href="/login" onClick={closeMenu}>
               Admin
             </a>
           </nav>

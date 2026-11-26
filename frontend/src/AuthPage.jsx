@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import './AdminLogin.css'
 import studioLogo from './assets/Midnight M Tattoo Studio Emblem.png'
 
-function AuthPage({ registering = false, admin = false }) {
+function AuthPage({ registering = false }) {
   const isRegistering = registering
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
@@ -26,14 +26,8 @@ function AuthPage({ registering = false, admin = false }) {
     if (isRegistering) {
       credentials.confirmPassword = formData.get('confirmPassword')
     }
-    if (admin && isRegistering) {
-      credentials.setupKey = formData.get('setupKey')
-    }
-
     try {
-      const endpoint = admin
-        ? `/api/admin/${isRegistering ? 'register' : 'login'}`
-        : `/api/user/${isRegistering ? 'register' : 'login'}`
+      const endpoint = `/api/user/${isRegistering ? 'register' : 'login'}`
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,7 +45,7 @@ function AuthPage({ registering = false, admin = false }) {
         throw new Error(result.message || 'Unable to sign in.')
       }
 
-      window.location.assign(admin ? '/admin' : '/account')
+      window.location.assign(result.role === 'admin' ? '/admin' : '/account')
     } catch (requestError) {
       setMessage(requestError.message || 'Unable to sign in.')
     } finally {
@@ -73,34 +67,20 @@ function AuthPage({ registering = false, admin = false }) {
             </span>
           </a>
 
-          <p className="admin-login-eyebrow">
-            {admin ? 'STUDIO MANAGEMENT' : 'YOUR STUDIO ACCOUNT'}
-          </p>
+          <p className="admin-login-eyebrow">YOUR STUDIO ACCOUNT</p>
           <h1 id="admin-login-title">
-            {admin
-              ? isRegistering ? 'Create the first admin' : 'Admin sign in'
-              : isRegistering ? 'Create your account' : 'Welcome back'}
+            {isRegistering ? 'Create your account' : 'Welcome back'}
           </h1>
           <p className="admin-login-intro">
-            {admin
-              ? isRegistering
-                ? 'Set up the studio’s primary admin account.'
-                : 'Sign in to manage consultation requests.'
-              : isRegistering
-                ? 'Create a customer account for your Moise Tattoo profile.'
-                : 'Sign in to your customer account.'}
+            {isRegistering
+              ? 'Create a customer account for your Moise Tattoo profile.'
+              : 'Sign in to your account. Admin accounts will open the dashboard.'}
           </p>
-          {isRegistering && !admin && (
+          {isRegistering && (
             <p className="admin-login-access-note">
               Customer accounts cannot access the admin dashboard or booking records.
             </p>
           )}
-          {isRegistering && admin && (
-            <p className="admin-login-access-note">
-              This one-time setup closes as soon as the first admin account is created.
-            </p>
-          )}
-
           <form className="admin-login-form" onSubmit={handleSubmit}>
             <label>
               Email address
@@ -112,19 +92,6 @@ function AuthPage({ registering = false, admin = false }) {
                 required
               />
             </label>
-            {isRegistering && admin && (
-              <label>
-                One-time setup key
-                <input
-                  type="password"
-                  name="setupKey"
-                  autoComplete="one-time-code"
-                  placeholder="Enter the setup key"
-                  maxLength={256}
-                  required
-                />
-              </label>
-            )}
             <label>
               Password
               <input
@@ -154,30 +121,14 @@ function AuthPage({ registering = false, admin = false }) {
             <button type="submit" disabled={busy}>
               {busy
                 ? 'Please wait…'
-                : isRegistering
-                  ? admin ? 'Create admin account' : 'Create account'
-                  : 'Sign in'}
+                : isRegistering ? 'Create account' : 'Sign in'}
             </button>
             {message && <p className="admin-login-message" role="alert">{message}</p>}
           </form>
 
-          {!admin && (
-            <a className="admin-login-switch" href={isRegistering ? '/login' : '/register'}>
-              {isRegistering ? 'Already have an account? Sign in' : 'Don’t have an account? Register'}
-            </a>
-          )}
-          {admin ? (
-            <>
-              <a className="admin-login-switch" href={isRegistering ? '/admin/login' : '/admin/register'}>
-                {isRegistering ? 'Already set up? Admin sign in' : 'First time? Register admin'}
-              </a>
-              {!isRegistering && (
-                <a className="admin-login-switch" href="/login">Customer sign in</a>
-              )}
-            </>
-          ) : !isRegistering ? (
-            <a className="admin-login-switch" href="/admin/login">Studio administrator? Sign in</a>
-          ) : null}
+          <a className="admin-login-switch" href={isRegistering ? '/login' : '/register'}>
+            {isRegistering ? 'Already have an account? Sign in' : 'Don’t have an account? Register'}
+          </a>
         </section>
       </div>
     </main>

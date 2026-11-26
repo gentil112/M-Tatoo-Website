@@ -57,7 +57,7 @@ function AdminDashboard() {
     fetch('/api/admin/session')
       .then((response) => {
         if (response.status === 401) {
-          window.location.replace('/admin/login')
+          window.location.replace('/login')
           return null
         }
 
@@ -95,7 +95,7 @@ function AdminDashboard() {
     fetch(`/api/admin/bookings?${query}`)
       .then((response) => {
         if (response.status === 401) {
-          window.location.replace('/admin/login')
+          window.location.replace('/login')
           return null
         }
 
@@ -129,7 +129,7 @@ function AdminDashboard() {
     fetch('/api/admin/summary')
       .then((response) => {
         if (response.status === 401) {
-          window.location.replace('/admin/login')
+          window.location.replace('/login')
           return null
         }
 
@@ -156,7 +156,7 @@ function AdminDashboard() {
     try {
       const response = await fetch('/api/admin/logout', { method: 'POST' })
       if (!response.ok) throw new Error('Unable to log out. Please try again.')
-      window.location.replace('/admin/login')
+      window.location.replace('/login')
     } catch (requestError) {
       setError(requestError.message || 'Unable to log out.')
     }
@@ -178,7 +178,7 @@ function AdminDashboard() {
       setRefreshKey((current) => current + 1)
     } catch (requestError) {
       if (requestError.status === 401) {
-        window.location.replace('/admin/login')
+        window.location.replace('/login')
         return
       }
 
@@ -239,7 +239,7 @@ function AdminDashboard() {
           <section className="admin-session-error" aria-labelledby="admin-session-title">
             <h1 id="admin-session-title">Dashboard unavailable</h1>
             <p>{error || 'Sign in to access the dashboard.'}</p>
-            <a href="/admin/login">Go to sign in</a>
+            <a href="/login">Go to sign in</a>
           </section>
         ) : (
         <section className="admin-dashboard" aria-labelledby="admin-title">

@@ -8,13 +8,13 @@ import UserAccount from './UserAccount.jsx'
 
 const route = window.location.pathname.replace(/\/+$/, '') || '/'
 
+if (route === '/admin/login') {
+  window.history.replaceState(null, '', '/login')
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {route === '/admin/register' ? (
-      <AuthPage admin registering />
-    ) : route === '/admin/login' ? (
-      <AuthPage admin />
-    ) : route === '/login' ? (
+    {route === '/admin/login' || route === '/login' ? (
       <AuthPage />
     ) : route === '/register' ? (
       <AuthPage registering />

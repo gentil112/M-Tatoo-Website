@@ -17,7 +17,7 @@ function requireAdmin(request, response, next) {
 
     if (
       payload.role !== 'admin' ||
-      payload.sub !== 'primary' ||
+      typeof payload.sub !== 'string' ||
       typeof payload.email !== 'string'
     ) {
       return response.status(401).json({ message: 'Authentication required.' })

@@ -1,55 +1,11 @@
 const express = require('express')
-const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
-const rateLimit = require('express-rate-limit')
 const mongoose = require('mongoose')
-const { timingSafeEqual } = require('node:crypto')
-const Account = require('../models/Account')
 const Booking = require('../models/Booking')
 const { cookieName, requireAdmin } = require('../middleware/requireAdmin')
 
 const router = express.Router()
 const bookingStatuses = ['new', 'contacted', 'confirmed', 'cancelled']
 const bookingPageSize = 20
-const sessionDurationMs = 8 * 60 * 60 * 1000
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: 'Too many login attempts. Try again in 15 minutes.' },
-})
-const registerLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: 'Too many setup attempts. Try again in 15 minutes.' },
-})
-
-function isValidEmail(email) {
-  return typeof email === 'string' &&
-    email.length <= 254 &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-}
-
-function createSession(admin, response) {
-  const token = jwt.sign(
-    { email: admin.email, role: 'admin' },
-    process.env.JWT_SECRET,
-    {
-      audience: 'moise-tattoo-admin',
-      expiresIn: '8h',
-      issuer: 'moise-tattoo-api',
-      subject: String(admin._id),
-    },
-  )
-
-  response.cookie(cookieName, token, {
-    ...sessionCookieOptions(),
-    maxAge: sessionDurationMs,
-  })
-}
 
 function sessionCookieOptions() {
   return {
@@ -59,102 +15,6 @@ function sessionCookieOptions() {
     path: '/api/admin',
   }
 }
-
-router.post('/register', registerLimiter, async (request, response, next) => {
-  try {
-    if (await Account.exists({ _id: 'primary' })) {
-      return response.status(409).json({ message: 'Admin setup is already complete. Sign in instead.' })
-    }
-
-    const configuredKey = process.env.ADMIN_SETUP_KEY
-    const configuredKeyLength = configuredKey
-      ? Buffer.byteLength(configuredKey, 'utf8')
-      : 0
-    if (configuredKeyLength < 32 || configuredKeyLength > 256) {
-      return response.status(503).json({ message: 'First-admin setup is not enabled.' })
-    }
-
-    const { email, password, confirmPassword, setupKey } = request.body || {}
-    if (
-      typeof setupKey !== 'string' ||
-      Buffer.byteLength(setupKey, 'utf8') > 256 ||
-      Buffer.byteLength(setupKey, 'utf8') !== Buffer.byteLength(configuredKey, 'utf8') ||
-      !timingSafeEqual(Buffer.from(setupKey, 'utf8'), Buffer.from(configuredKey, 'utf8'))
-    ) {
-      return response.status(403).json({ message: 'The admin setup key is invalid.' })
-    }
-
-    if (
-      !isValidEmail(email) ||
-      typeof password !== 'string' ||
-      typeof confirmPassword !== 'string' ||
-      password !== confirmPassword ||
-      Buffer.byteLength(password, 'utf8') < 16 ||
-      Buffer.byteLength(password, 'utf8') > 72
-    ) {
-      return response.status(400).json({
-        message: 'Enter a valid email and matching password of 16 to 72 bytes.',
-      })
-    }
-
-    const normalizedEmail = email.trim().toLowerCase()
-    if (await Account.exists({ email: normalizedEmail })) {
-      return response.status(409).json({
-        message: 'This email is already used by an account. Choose another email.',
-      })
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12)
-    const admin = await Account.create({
-      _id: 'primary',
-      email: normalizedEmail,
-      passwordHash,
-      role: 'admin',
-    })
-
-    createSession(admin, response)
-    response.status(201).json({ email: admin.email })
-  } catch (error) {
-    if (error.code === 11000) {
-      return response.status(409).json({
-        message: 'Admin setup is already complete or this email is already in use.',
-      })
-    }
-
-    next(error)
-  }
-})
-
-router.post('/login', loginLimiter, async (request, response, next) => {
-  try {
-    const { email, password } = request.body || {}
-
-    if (
-      !isValidEmail(email) ||
-      typeof password !== 'string' ||
-      !password ||
-      Buffer.byteLength(password, 'utf8') > 72
-    ) {
-      return response.status(400).json({ message: 'Enter a valid email and password.' })
-    }
-
-    const admin = await Account.findById('primary').select('+passwordHash')
-    const passwordMatches = admin
-      ? await bcrypt.compare(password, admin.passwordHash)
-      : false
-    const emailMatches = admin &&
-      email.trim().toLowerCase() === admin.email
-
-    if (!admin || admin.role !== 'admin' || !passwordMatches || !emailMatches) {
-      return response.status(401).json({ message: 'Email or password is incorrect.' })
-    }
-
-    createSession(admin, response)
-    response.json({ email: admin.email })
-  } catch (error) {
-    next(error)
-  }
-})
 
 router.post('/logout', (_request, response) => {
   response.clearCookie(cookieName, sessionCookieOptions())

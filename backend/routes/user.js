@@ -3,7 +3,8 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const rateLimit = require('express-rate-limit')
 const Account = require('../models/Account')
-const { cookieName, requireUser } = require('../middleware/requireUser')
+const { cookieName: userCookieName, requireUser } = require('../middleware/requireUser')
+const { cookieName: adminCookieName } = require('../middleware/requireAdmin')
 
 const router = express.Router()
 const sessionDurationMs = 8 * 60 * 60 * 1000
@@ -28,31 +29,37 @@ function isValidEmail(email) {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 }
 
-function createSession(user, response) {
-  const token = jwt.sign(
-    { email: user.email, role: 'user' },
-    process.env.JWT_SECRET,
-    {
-      audience: 'moise-tattoo-user',
-      expiresIn: '8h',
-      issuer: 'moise-tattoo-api',
-      subject: String(user._id),
-    },
-  )
-
-  response.cookie(cookieName, token, {
-    ...sessionCookieOptions(),
-    maxAge: sessionDurationMs,
-  })
-}
-
-function sessionCookieOptions() {
+function sessionCookieOptions(path) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    path: '/api/user',
+    path,
   }
+}
+
+function createSession(account, response) {
+  const isAdmin = account.role === 'admin'
+  const cookieName = isAdmin ? adminCookieName : userCookieName
+  const cookiePath = isAdmin ? '/api/admin' : '/api/user'
+  const otherCookieName = isAdmin ? userCookieName : adminCookieName
+  const otherCookiePath = isAdmin ? '/api/user' : '/api/admin'
+  const token = jwt.sign(
+    { email: account.email, role: account.role },
+    process.env.JWT_SECRET,
+    {
+      audience: isAdmin ? 'moise-tattoo-admin' : 'moise-tattoo-user',
+      expiresIn: '8h',
+      issuer: 'moise-tattoo-api',
+      subject: String(account._id),
+    },
+  )
+
+  response.cookie(cookieName, token, {
+    ...sessionCookieOptions(cookiePath),
+    maxAge: sessionDurationMs,
+  })
+  response.clearCookie(otherCookieName, sessionCookieOptions(otherCookiePath))
 }
 
 router.post('/register', registerLimiter, async (request, response, next) => {
@@ -86,7 +93,7 @@ router.post('/register', registerLimiter, async (request, response, next) => {
     })
 
     createSession(user, response)
-    response.status(201).json({ email: user.email })
+    response.status(201).json({ email: user.email, role: user.role })
   } catch (error) {
     if (error.code === 11000) {
       return response.status(409).json({ message: 'An account with this email already exists.' })
@@ -112,23 +119,21 @@ router.post('/login', loginLimiter, async (request, response, next) => {
     const user = await Account.findOne({
       email: email.trim().toLowerCase(),
     }).select('+passwordHash')
-    const passwordMatches = user && user.role === 'user'
-      ? await bcrypt.compare(password, user.passwordHash)
-      : false
+    const passwordMatches = user ? await bcrypt.compare(password, user.passwordHash) : false
 
-    if (!user || user.role !== 'user' || !passwordMatches) {
+    if (!user || !['admin', 'user'].includes(user.role) || !passwordMatches) {
       return response.status(401).json({ message: 'Email or password is incorrect.' })
     }
 
     createSession(user, response)
-    response.json({ email: user.email })
+    response.json({ email: user.email, role: user.role })
   } catch (error) {
     next(error)
   }
 })
 
 router.post('/logout', (_request, response) => {
-  response.clearCookie(cookieName, sessionCookieOptions())
+  response.clearCookie(userCookieName, sessionCookieOptions('/api/user'))
   response.status(204).end()
 })
 

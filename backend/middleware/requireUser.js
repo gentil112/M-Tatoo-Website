@@ -18,7 +18,6 @@ function requireUser(request, response, next) {
     if (
       payload.role !== 'user' ||
       typeof payload.sub !== 'string' ||
-      payload.sub === 'primary' ||
       typeof payload.email !== 'string'
     ) {
       return response.status(401).json({ message: 'Authentication required.' })
