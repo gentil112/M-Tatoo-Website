@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const rateLimit = require('express-rate-limit')
 const mongoose = require('mongoose')
+const { timingSafeEqual } = require('node:crypto')
 const Account = require('../models/Account')
 const Booking = require('../models/Booking')
 const { cookieName, requireAdmin } = require('../middleware/requireAdmin')
@@ -17,6 +18,13 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many login attempts. Try again in 15 minutes.' },
+})
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many setup attempts. Try again in 15 minutes.' },
 })
 
 function isValidEmail(email) {
@@ -52,8 +60,69 @@ function sessionCookieOptions() {
   }
 }
 
-router.post('/register', (_request, response) => {
-  response.status(403).json({ message: 'Admin registration is not available.' })
+router.post('/register', registerLimiter, async (request, response, next) => {
+  try {
+    if (await Account.exists({ _id: 'primary' })) {
+      return response.status(409).json({ message: 'Admin setup is already complete. Sign in instead.' })
+    }
+
+    const configuredKey = process.env.ADMIN_SETUP_KEY
+    const configuredKeyLength = configuredKey
+      ? Buffer.byteLength(configuredKey, 'utf8')
+      : 0
+    if (configuredKeyLength < 32 || configuredKeyLength > 256) {
+      return response.status(503).json({ message: 'First-admin setup is not enabled.' })
+    }
+
+    const { email, password, confirmPassword, setupKey } = request.body || {}
+    if (
+      typeof setupKey !== 'string' ||
+      Buffer.byteLength(setupKey, 'utf8') > 256 ||
+      Buffer.byteLength(setupKey, 'utf8') !== Buffer.byteLength(configuredKey, 'utf8') ||
+      !timingSafeEqual(Buffer.from(setupKey, 'utf8'), Buffer.from(configuredKey, 'utf8'))
+    ) {
+      return response.status(403).json({ message: 'The admin setup key is invalid.' })
+    }
+
+    if (
+      !isValidEmail(email) ||
+      typeof password !== 'string' ||
+      typeof confirmPassword !== 'string' ||
+      password !== confirmPassword ||
+      Buffer.byteLength(password, 'utf8') < 16 ||
+      Buffer.byteLength(password, 'utf8') > 72
+    ) {
+      return response.status(400).json({
+        message: 'Enter a valid email and matching password of 16 to 72 bytes.',
+      })
+    }
+
+    const normalizedEmail = email.trim().toLowerCase()
+    if (await Account.exists({ email: normalizedEmail })) {
+      return response.status(409).json({
+        message: 'This email is already used by an account. Choose another email.',
+      })
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12)
+    const admin = await Account.create({
+      _id: 'primary',
+      email: normalizedEmail,
+      passwordHash,
+      role: 'admin',
+    })
+
+    createSession(admin, response)
+    response.status(201).json({ email: admin.email })
+  } catch (error) {
+    if (error.code === 11000) {
+      return response.status(409).json({
+        message: 'Admin setup is already complete or this email is already in use.',
+      })
+    }
+
+    next(error)
+  }
 })
 
 router.post('/login', loginLimiter, async (request, response, next) => {

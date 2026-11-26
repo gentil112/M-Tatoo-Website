@@ -10,7 +10,9 @@ const route = window.location.pathname.replace(/\/+$/, '') || '/'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {route === '/admin/login' ? (
+    {route === '/admin/register' ? (
+      <AuthPage admin registering />
+    ) : route === '/admin/login' ? (
       <AuthPage admin />
     ) : route === '/login' ? (
       <AuthPage />

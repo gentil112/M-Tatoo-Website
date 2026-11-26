@@ -3,7 +3,7 @@ import './AdminLogin.css'
 import studioLogo from './assets/Midnight M Tattoo Studio Emblem.png'
 
 function AuthPage({ registering = false, admin = false }) {
-  const isRegistering = registering && !admin
+  const isRegistering = registering
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -26,10 +26,13 @@ function AuthPage({ registering = false, admin = false }) {
     if (isRegistering) {
       credentials.confirmPassword = formData.get('confirmPassword')
     }
+    if (admin && isRegistering) {
+      credentials.setupKey = formData.get('setupKey')
+    }
 
     try {
       const endpoint = admin
-        ? '/api/admin/login'
+        ? `/api/admin/${isRegistering ? 'register' : 'login'}`
         : `/api/user/${isRegistering ? 'register' : 'login'}`
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -74,18 +77,27 @@ function AuthPage({ registering = false, admin = false }) {
             {admin ? 'STUDIO MANAGEMENT' : 'YOUR STUDIO ACCOUNT'}
           </p>
           <h1 id="admin-login-title">
-            {admin ? 'Admin sign in' : isRegistering ? 'Create your account' : 'Welcome back'}
+            {admin
+              ? isRegistering ? 'Create the first admin' : 'Admin sign in'
+              : isRegistering ? 'Create your account' : 'Welcome back'}
           </h1>
           <p className="admin-login-intro">
             {admin
-              ? 'Sign in to manage consultation requests.'
+              ? isRegistering
+                ? 'Set up the studio’s primary admin account.'
+                : 'Sign in to manage consultation requests.'
               : isRegistering
                 ? 'Create a customer account for your Moise Tattoo profile.'
                 : 'Sign in to your customer account.'}
           </p>
-          {isRegistering && (
+          {isRegistering && !admin && (
             <p className="admin-login-access-note">
               Customer accounts cannot access the admin dashboard or booking records.
+            </p>
+          )}
+          {isRegistering && admin && (
+            <p className="admin-login-access-note">
+              This one-time setup closes as soon as the first admin account is created.
             </p>
           )}
 
@@ -100,6 +112,19 @@ function AuthPage({ registering = false, admin = false }) {
                 required
               />
             </label>
+            {isRegistering && admin && (
+              <label>
+                One-time setup key
+                <input
+                  type="password"
+                  name="setupKey"
+                  autoComplete="one-time-code"
+                  placeholder="Enter the setup key"
+                  maxLength={256}
+                  required
+                />
+              </label>
+            )}
             <label>
               Password
               <input
@@ -127,7 +152,11 @@ function AuthPage({ registering = false, admin = false }) {
               </label>
             )}
             <button type="submit" disabled={busy}>
-              {busy ? 'Please wait…' : isRegistering ? 'Create account' : 'Sign in'}
+              {busy
+                ? 'Please wait…'
+                : isRegistering
+                  ? admin ? 'Create admin account' : 'Create account'
+                  : 'Sign in'}
             </button>
             {message && <p className="admin-login-message" role="alert">{message}</p>}
           </form>
@@ -138,7 +167,14 @@ function AuthPage({ registering = false, admin = false }) {
             </a>
           )}
           {admin ? (
-            <a className="admin-login-switch" href="/login">Customer sign in</a>
+            <>
+              <a className="admin-login-switch" href={isRegistering ? '/admin/login' : '/admin/register'}>
+                {isRegistering ? 'Already set up? Admin sign in' : 'First time? Register admin'}
+              </a>
+              {!isRegistering && (
+                <a className="admin-login-switch" href="/login">Customer sign in</a>
+              )}
+            </>
           ) : !isRegistering ? (
             <a className="admin-login-switch" href="/admin/login">Studio administrator? Sign in</a>
           ) : null}
