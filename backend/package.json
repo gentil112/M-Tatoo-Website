@@ -4,8 +4,8 @@
   "description": "Moise Tattoo booking API",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node devServer.js",
+    "dev": "node --watch devServer.js"
   },
   "engines": {
     "node": ">=20.19.0"

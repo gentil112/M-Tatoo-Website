@@ -13,6 +13,8 @@ The API listens on port 5000 by default. `POST /api/bookings` stores consultatio
 
 Account passwords are stored as bcrypt hashes in MongoDB. The existing `primary` admin and booking data are preserved. Previously registered non-primary accounts are treated as customer accounts; public registration no longer creates admins.
 
+Vercel loads `server.js` as the exported Express app and connects to MongoDB on request. Local `npm start` and `npm run dev` use `devServer.js` to listen on port 5000.
+
 For production, serve the frontend and API on the same origin (or configure a same-origin reverse proxy), use HTTPS, and set `NODE_ENV=production` so session cookies are marked secure. Never commit `.env` or share the Atlas connection string or session secret.
 
 For Vercel, deploy this repository as one **Services** project so the root `vercel.json` can route `/api/*` to the Express backend and all other paths to the Vite frontend. Keep the project root at the repository root. Set `MONGODB_URI` and `JWT_SECRET` in the project's Production environment variables; `backend/.env` is local-only. Redeploy after changing environment variables, and use the project's production domain rather than a deployment-specific URL.
