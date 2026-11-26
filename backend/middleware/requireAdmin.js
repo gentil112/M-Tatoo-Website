@@ -15,7 +15,11 @@ function requireAdmin(request, response, next) {
       issuer: 'moise-tattoo-api',
     })
 
-    if (payload.sub !== 'admin' || typeof payload.email !== 'string') {
+    if (
+      payload.role !== 'admin' ||
+      payload.sub !== 'primary' ||
+      typeof payload.email !== 'string'
+    ) {
       return response.status(401).json({ message: 'Authentication required.' })
     }
 

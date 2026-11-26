@@ -206,8 +206,12 @@ function App() {
                 {item.label}
               </a>
             ))}
+            <a href="/login" onClick={closeMenu}>Sign in</a>
             <a className="mobile-booking" href="#book" onClick={closeMenu}>
               Book a consultation <span aria-hidden="true">↗</span>
+            </a>
+            <a className="mobile-admin" href="/admin/login" onClick={closeMenu}>
+              Admin
             </a>
           </nav>
 
@@ -401,7 +405,6 @@ function App() {
         <div className="wrap footer-inner">
           <a className="footer-brand" href="#top">Moise Tattoo</a>
           <span>Custom tattoos, made personal.</span>
-          <a className="admin-footer-link" href="/login">Admin</a>
           <a href="#top">Back to top ↑</a>
         </div>
       </footer>

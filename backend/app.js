@@ -4,8 +4,10 @@ const cookieParser = require('cookie-parser')
 const mongoose = require('mongoose')
 const Booking = require('./models/Booking')
 const adminRouter = require('./routes/admin')
+const userRouter = require('./routes/user')
 
 const app = express()
+app.set('trust proxy', 1)
 const allowedStyles = new Set([
   'Fine line',
   'Blackwork',
@@ -73,6 +75,7 @@ app.post('/api/bookings', async (request, response, next) => {
 })
 
 app.use('/api/admin', adminRouter)
+app.use('/api/user', userRouter)
 
 app.use((error, _request, response, _next) => {
   if (error.type === 'entity.too.large') {

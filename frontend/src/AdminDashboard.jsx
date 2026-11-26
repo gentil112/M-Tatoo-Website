@@ -14,7 +14,7 @@ async function getResponseData(response) {
   const contentType = response.headers.get('content-type') || ''
 
   if (!contentType.includes('application/json')) {
-    throw new Error('The booking API returned a non-JSON response. Restart the backend and refresh this page.')
+    throw new Error('The booking API returned a non-JSON response.')
   }
 
   const result = await response.json()
@@ -28,13 +28,10 @@ async function getResponseData(response) {
   return result
 }
 
-function AdminDashboard({ mode }) {
+function AdminDashboard() {
   const [authenticated, setAuthenticated] = useState(false)
-  const [checkingSession, setCheckingSession] = useState(mode === 'dashboard')
+  const [checkingSession, setCheckingSession] = useState(true)
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [registering, setRegistering] = useState(false)
   const [filter, setFilter] = useState('all')
   const [searchText, setSearchText] = useState('')
   const [page, setPage] = useState(1)
@@ -44,7 +41,6 @@ function AdminDashboard({ mode }) {
   const [summary, setSummary] = useState(emptySummary)
   const [summaryLoading, setSummaryLoading] = useState(true)
   const [loadingBookings, setLoadingBookings] = useState(true)
-  const [loginBusy, setLoginBusy] = useState(false)
   const [updatingId, setUpdatingId] = useState('')
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
@@ -56,27 +52,25 @@ function AdminDashboard({ mode }) {
   }, [])
 
   useEffect(() => {
-    if (mode === 'login') return undefined
-
     let active = true
 
     fetch('/api/admin/session')
-      .then(async (response) => {
+      .then((response) => {
         if (response.status === 401) {
-          if (active) window.location.replace('/login')
-          return
+          window.location.replace('/admin/login')
+          return null
         }
-        const result = await getResponseData(response)
-        if (active) {
+
+        return getResponseData(response)
+      })
+      .then((result) => {
+        if (active && result) {
           setEmail(result.email)
           setAuthenticated(true)
-          if (mode === 'login') window.location.replace('/admin')
         }
       })
       .catch((requestError) => {
-        if (active) {
-          setError(requestError.message || 'Unable to reach the booking API.')
-        }
+        if (active) setError(requestError.message || 'Unable to verify your session.')
       })
       .finally(() => {
         if (active) setCheckingSession(false)
@@ -85,7 +79,7 @@ function AdminDashboard({ mode }) {
     return () => {
       active = false
     }
-  }, [mode])
+  }, [])
 
   useEffect(() => {
     if (!authenticated) return undefined
@@ -101,7 +95,7 @@ function AdminDashboard({ mode }) {
     fetch(`/api/admin/bookings?${query}`)
       .then((response) => {
         if (response.status === 401) {
-          if (active) window.location.replace('/login')
+          window.location.replace('/admin/login')
           return null
         }
 
@@ -135,7 +129,7 @@ function AdminDashboard({ mode }) {
     fetch('/api/admin/summary')
       .then((response) => {
         if (response.status === 401) {
-          if (active) window.location.replace('/login')
+          window.location.replace('/admin/login')
           return null
         }
 
@@ -156,59 +150,13 @@ function AdminDashboard({ mode }) {
     }
   }, [authenticated, refreshKey])
 
-  async function handleLogin(event) {
-    event.preventDefault()
-    setLoginBusy(true)
-    setError('')
-
-    try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const result = await getResponseData(response)
-      setEmail(result.email)
-      window.location.assign('/admin')
-    } catch (requestError) {
-      setError(requestError.message || 'Unable to log in.')
-    } finally {
-      setLoginBusy(false)
-    }
-  }
-
-  async function handleRegister(event) {
-    event.preventDefault()
-    setLoginBusy(true)
-    setError('')
-
-    try {
-      const response = await fetch('/api/admin/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, confirmPassword }),
-      })
-      await getResponseData(response)
-      window.location.assign('/admin')
-    } catch (requestError) {
-      if (requestError.status === 409) {
-        setRegistering(false)
-        setPassword('')
-        setConfirmPassword('')
-      }
-      setError(requestError.message || 'Unable to register the admin account.')
-    } finally {
-      setLoginBusy(false)
-    }
-  }
-
   async function handleLogout() {
     setError('')
 
     try {
       const response = await fetch('/api/admin/logout', { method: 'POST' })
       if (!response.ok) throw new Error('Unable to log out. Please try again.')
-      window.location.replace('/login')
+      window.location.replace('/admin/login')
     } catch (requestError) {
       setError(requestError.message || 'Unable to log out.')
     }
@@ -229,10 +177,11 @@ function AdminDashboard({ mode }) {
       setSummaryLoading(true)
       setRefreshKey((current) => current + 1)
     } catch (requestError) {
-      if (requestError.message === 'Authentication required.') {
-        window.location.replace('/login')
+      if (requestError.status === 401) {
+        window.location.replace('/admin/login')
         return
       }
+
       setError(requestError.message || 'Unable to update this booking.')
     } finally {
       setUpdatingId('')
@@ -284,98 +233,16 @@ function AdminDashboard({ mode }) {
   return (
     <main className="admin-page">
       <div className="admin-shell">
-        {!(authenticated && mode === 'dashboard') && (
-          <header className="admin-header">
-            <a className="admin-brand" href="/">Moise <span>Tattoo studio</span></a>
-            <a className="admin-home-link" href="/">Return to website ↗</a>
-          </header>
-        )}
-
         {checkingSession ? (
           <p className="admin-loading" role="status">Checking your session…</p>
-        ) : mode === 'login' && !authenticated ? (
-          <section className="admin-login-card" aria-labelledby="admin-title">
-            <p className="eyebrow">PRIVATE STUDIO ACCESS</p>
-            <h1 id="admin-title">{registering ? 'Register admin' : 'Admin login'}</h1>
-            <p className="admin-intro">
-              {registering
-                ? 'Create the studio’s first admin account. Registration closes after this account is created.'
-                : 'Sign in to manage consultation requests.'}
-            </p>
-            {error && <p className="admin-error" role="alert">{error}</p>}
-            <form
-              className="admin-login-form"
-              onSubmit={registering ? handleRegister : handleLogin}
-            >
-              <label>
-                Email address
-                <input
-                  type="email"
-                  name="email"
-                  autoComplete="username"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </label>
-              <label>
-                Password
-                <input
-                  type="password"
-                  name="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  minLength={registering ? 16 : undefined}
-                  maxLength={72}
-                />
-              </label>
-              {registering && (
-                <label>
-                  Confirm password
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    autoComplete="new-password"
-                    required
-                    minLength={16}
-                    maxLength={72}
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                  />
-                </label>
-              )}
-              <button className="button-link admin-submit" type="submit" disabled={loginBusy}>
-                {loginBusy
-                  ? registering ? 'Registering…' : 'Signing in…'
-                  : registering ? 'Register admin' : 'Sign in'}
-              </button>
-            </form>
-            <button
-              className="admin-auth-switch"
-              type="button"
-              onClick={() => {
-                setRegistering((current) => !current)
-                setPassword('')
-                setConfirmPassword('')
-                setError('')
-              }}
-            >
-              {registering ? 'Back to sign in' : 'Register admin'}
-            </button>
-          </section>
         ) : !authenticated ? (
-          <section className="admin-login-card" aria-labelledby="admin-title">
-            <p className="eyebrow">PRIVATE STUDIO ACCESS</p>
-            <h1 id="admin-title">Session unavailable</h1>
-            <p className="admin-intro">
-              {error || 'Sign in to access the dashboard.'}
-            </p>
-            <a className="button-link" href="/login">Go to login</a>
+          <section className="admin-session-error" aria-labelledby="admin-session-title">
+            <h1 id="admin-session-title">Dashboard unavailable</h1>
+            <p>{error || 'Sign in to access the dashboard.'}</p>
+            <a href="/admin/login">Go to sign in</a>
           </section>
         ) : (
-          <section className="admin-dashboard" aria-labelledby="admin-title">
+        <section className="admin-dashboard" aria-labelledby="admin-title">
             <aside className="admin-sidebar">
               <a className="admin-brand" href="/">
                 Moise <span>Tattoo studio</span>

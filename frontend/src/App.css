@@ -211,7 +211,8 @@ textarea:focus-visible {
 }
 
 .menu-toggle,
-.mobile-booking {
+.mobile-booking,
+.mobile-admin {
   display: none;
 }
 
@@ -697,15 +698,6 @@ textarea:focus-visible {
   transition: color 180ms ease;
 }
 
-.site-footer .admin-footer-link {
-  border: 1px solid var(--line);
-  padding: 7px 12px;
-}
-
-.site-footer .admin-footer-link:hover {
-  border-color: var(--gold);
-}
-
 @media (max-width: 820px) {
   .page-wrap,
   .wrap {
@@ -762,6 +754,10 @@ textarea:focus-visible {
     align-items: center;
     justify-content: space-between;
     color: var(--bone);
+  }
+
+  .primary-nav .mobile-admin {
+    display: block;
   }
 
   .booking-link {

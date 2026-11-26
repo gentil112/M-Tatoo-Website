@@ -20,14 +20,6 @@
   padding-bottom: 56px;
 }
 
-.admin-header {
-  display: flex;
-  min-height: 88px;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--dash-line);
-}
-
 .admin-brand {
   display: grid;
   color: var(--dash-ink);
@@ -56,16 +48,6 @@
   color: var(--dash-gold);
 }
 
-.admin-login-card {
-  width: min(100%, 440px);
-  margin: clamp(56px, 12vh, 120px) auto 0;
-  border: 1px solid var(--dash-line);
-  padding: clamp(24px, 5vw, 42px);
-  background: var(--dash-surface);
-  box-shadow: 0 24px 70px rgb(26 49 34 / 8%);
-}
-
-.admin-login-card h1,
 .admin-dashboard h1 {
   margin: 0;
   color: var(--dash-ink);
@@ -76,10 +58,33 @@
   line-height: 0.98;
 }
 
-.admin-login-card .eyebrow,
 .admin-dashboard .eyebrow {
   margin-bottom: 15px;
   color: var(--dash-gold);
+}
+
+.admin-session-error {
+  width: min(100%, 520px);
+  margin: clamp(56px, 12vh, 120px) auto 0;
+  border: 1px solid var(--dash-line);
+  padding: clamp(24px, 5vw, 42px);
+  background: var(--dash-surface);
+}
+
+.admin-session-error h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(36px, 7vw, 54px);
+  font-weight: 300;
+  line-height: 1;
+}
+
+.admin-session-error p {
+  color: var(--dash-muted);
+}
+
+.admin-session-error a {
+  color: var(--dash-deep);
 }
 
 .admin-intro {
@@ -88,12 +93,6 @@
   font-size: 14px;
 }
 
-.admin-login-form {
-  display: grid;
-  gap: 20px;
-}
-
-.admin-login-form label,
 .admin-list-toolbar label,
 .admin-status-control {
   display: grid;
@@ -102,7 +101,6 @@
   font-size: 12px;
 }
 
-.admin-login-form input,
 .admin-list-toolbar input,
 .admin-list-toolbar select,
 .admin-status-control select {
@@ -115,7 +113,6 @@
   font: inherit;
 }
 
-.admin-login-form input:focus,
 .admin-list-toolbar input:focus,
 .admin-list-toolbar select:focus,
 .admin-status-control select:focus {
@@ -124,27 +121,9 @@
   outline-offset: 2px;
 }
 
-.admin-submit {
-  justify-self: start;
-  margin-top: 4px;
-}
-
-.admin-submit:disabled,
 .admin-status-control select:disabled {
   cursor: wait;
   opacity: 0.65;
-}
-
-.admin-auth-switch {
-  border: 0;
-  padding: 16px 0 0;
-  color: #806b45;
-  background: transparent;
-  font: inherit;
-  font-size: 12px;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  cursor: pointer;
 }
 
 .admin-dashboard {

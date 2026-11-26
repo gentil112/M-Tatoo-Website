@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const rateLimit = require('express-rate-limit')
 const mongoose = require('mongoose')
-const Admin = require('../models/Admin')
+const Account = require('../models/Account')
 const Booking = require('../models/Booking')
 const { cookieName, requireAdmin } = require('../middleware/requireAdmin')
 
@@ -18,13 +18,6 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: 'Too many login attempts. Try again in 15 minutes.' },
 })
-const registerLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: 'Too many registration attempts. Try again in 15 minutes.' },
-})
 
 function isValidEmail(email) {
   return typeof email === 'string' &&
@@ -34,17 +27,20 @@ function isValidEmail(email) {
 
 function createSession(admin, response) {
   const token = jwt.sign(
-    { email: admin.email },
+    { email: admin.email, role: 'admin' },
     process.env.JWT_SECRET,
     {
       audience: 'moise-tattoo-admin',
       expiresIn: '8h',
       issuer: 'moise-tattoo-api',
-      subject: 'admin',
+      subject: String(admin._id),
     },
   )
 
-  response.cookie(cookieName, token, sessionCookieOptions())
+  response.cookie(cookieName, token, {
+    ...sessionCookieOptions(),
+    maxAge: sessionDurationMs,
+  })
 }
 
 function sessionCookieOptions() {
@@ -53,44 +49,11 @@ function sessionCookieOptions() {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/api/admin',
-    maxAge: sessionDurationMs,
   }
 }
 
-router.post('/register', registerLimiter, async (request, response, next) => {
-  try {
-    const { email, password, confirmPassword } = request.body || {}
-
-    if (
-      !isValidEmail(email) ||
-      typeof password !== 'string' ||
-      typeof confirmPassword !== 'string' ||
-      password !== confirmPassword ||
-      Buffer.byteLength(password, 'utf8') < 16 ||
-      Buffer.byteLength(password, 'utf8') > 72
-    ) {
-      return response.status(400).json({
-        message: 'Enter a valid email and matching password of 16 to 72 bytes.',
-      })
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12)
-    const admin = await Admin.create({
-      email: email.trim().toLowerCase(),
-      passwordHash,
-    })
-
-    createSession(admin, response)
-    response.status(201).json({ email: admin.email })
-  } catch (error) {
-    if (error.code === 11000) {
-      return response.status(409).json({
-        message: 'Admin registration is closed because an admin already exists.',
-      })
-    }
-
-    next(error)
-  }
+router.post('/register', (_request, response) => {
+  response.status(403).json({ message: 'Admin registration is not available.' })
 })
 
 router.post('/login', loginLimiter, async (request, response, next) => {
@@ -106,14 +69,14 @@ router.post('/login', loginLimiter, async (request, response, next) => {
       return response.status(400).json({ message: 'Enter a valid email and password.' })
     }
 
-    const admin = await Admin.findById('primary').select('+passwordHash')
+    const admin = await Account.findById('primary').select('+passwordHash')
     const passwordMatches = admin
       ? await bcrypt.compare(password, admin.passwordHash)
       : false
     const emailMatches = admin &&
       email.trim().toLowerCase() === admin.email
 
-    if (!admin || !passwordMatches || !emailMatches) {
+    if (!admin || admin.role !== 'admin' || !passwordMatches || !emailMatches) {
       return response.status(401).json({ message: 'Email or password is incorrect.' })
     }
 
